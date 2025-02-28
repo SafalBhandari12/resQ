@@ -1,0 +1,5 @@
+id,image_filename,latitude,longitude,location,description,status
+1,1740742555628-image.png,28.45313,77.482375,Shafipur,there is a landslide near my location,resolved
+2,1740743294433-image.png,28.45313,79.482375,Shafipur,there is a huge earthquake here,not_resolved
+3,1740744167440-image.png,28.460834,77.4890259,Greater Noida,there is landslide near my location,not_resolved
+4,1740745091571-image.png,28.45313,77.482375,Shafipur,there is an earthquake,not_resolved
