@@ -1,2 +1,4 @@
-id,image_filename,latitude,longitude,location,description,status
-1,1740754276443-image.png,28.4608484,77.4890455,Greater Noida,hello,not_resolved
+id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not
+1,1740796735333-image.png,28.4608401,77.4890495,Greater Noida,Hello,little_or_none,not_humanitarian,No Disaster
+2,1740796981370-image.png,28.45313,77.482375,Shafipur,there is a landslide near my area,little_or_none,infrastructure_and_utility_damage,Disaster
+3,1740797111078-image.png,29.45313,77.482375,Shafipur,there is an earthquake near my area,little_or_none,infrastructure_and_utility_damage,Disaster
