@@ -33,14 +33,15 @@ if (!fs.existsSync("uploaded_images")) {
   fs.mkdirSync("uploaded_images");
 }
 
-// CSV file to store reports with updated columns
+// CSV file to store reports with updated columns including status
 const CSV_FILE = "reports.csv";
 
 // Create CSV file with headers if it does not exist
+// CSV header now includes a "status" column inserted after description
 if (!fs.existsSync(CSV_FILE)) {
   fs.writeFileSync(
     CSV_FILE,
-    "id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not,urgency_level\n"
+    "id,image_filename,latitude,longitude,location,description,status,severity,humanitarian,disaster_or_not,urgency_level\n"
   );
 }
 
@@ -77,7 +78,7 @@ function getUrgencyLevel(humanitarian, severity) {
 // -----------------------------------------------------------------------------
 // Endpoint: POST /user/report/
 // Upload a report, predict damage severity, humanitarian impact, and disaster text,
-// then store the report with predictions and urgency level in the CSV.
+// then store the report with predictions, default status, and urgency level in the CSV.
 app.post("/user/report/", upload.single("image"), async (req, res) => {
   try {
     const { latitude, longitude, location, description } = req.body;
@@ -123,17 +124,21 @@ app.post("/user/report/", upload.single("image"), async (req, res) => {
     });
     const disasterPrediction = textResponse.data.predicted_label;
 
-    // Determine urgency level based on exact prediction values
+    // Determine urgency level based on predictions
     const urgencyLevel = getUrgencyLevel(
       humanitarianPrediction,
       severityPrediction
     );
 
+    // Set default status as "not_resolved"
+    const defaultStatus = "not_resolved";
+
     // Append new report data to the CSV file
-    const newRow = `${reportId},${image.filename},${latitude},${longitude},${location},${description},${severityPrediction},${humanitarianPrediction},${disasterPrediction},${urgencyLevel}\n`;
+    // Order: id, image_filename, latitude, longitude, location, description, status, severity, humanitarian, disaster_or_not, urgency_level
+    const newRow = `${reportId},${image.filename},${latitude},${longitude},${location},${description},${defaultStatus},${severityPrediction},${humanitarianPrediction},${disasterPrediction},${urgencyLevel}\n`;
     fs.appendFileSync(CSV_FILE, newRow);
 
-    // Return the report details along with predictions and urgency level
+    // Return the report details along with predictions, default status, and urgency level
     res.json({
       id: reportId,
       image_filename: image.filename,
@@ -141,6 +146,7 @@ app.post("/user/report/", upload.single("image"), async (req, res) => {
       longitude: parseFloat(longitude),
       location,
       description,
+      status: defaultStatus,
       severity: severityPrediction,
       humanitarian: humanitarianPrediction,
       disaster_or_not: disasterPrediction,
@@ -181,6 +187,50 @@ app.get("/user/reports/", (req, res) => {
   } catch (error) {
     console.error("Error fetching reports:", error.message);
     res.status(500).json({ message: "Failed to fetch reports." });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// Endpoint: PUT /admin/report/:id/status
+// Update the status of a specific report based on its ID.
+// This endpoint reads the CSV, updates the report's status column, and rewrites the CSV.
+app.put("/admin/report/:id/status", (req, res) => {
+  try {
+    const reportId = Number(req.params.id);
+    const { status } = req.body;
+
+    // Read CSV file
+    let csvData = fs.readFileSync(CSV_FILE, "utf8");
+    let lines = csvData.trim().split("\n");
+    const headers = lines[0].split(",");
+    const statusIndex = headers.indexOf("status");
+    if (statusIndex === -1) {
+      return res
+        .status(500)
+        .json({ message: "CSV file is missing 'status' column." });
+    }
+
+    let updated = false;
+    // Loop through each report row to find the matching report ID
+    for (let i = 1; i < lines.length; i++) {
+      let row = lines[i].split(",");
+      if (Number(row[0]) === reportId) {
+        row[statusIndex] = status;
+        lines[i] = row.join(",");
+        updated = true;
+        break;
+      }
+    }
+
+    if (!updated) {
+      return res.status(404).json({ message: "Report not found." });
+    }
+
+    fs.writeFileSync(CSV_FILE, lines.join("\n"));
+    res.json({ message: "Status updated successfully." });
+  } catch (error) {
+    console.error("Error updating status:", error.message);
+    res.status(500).json({ message: "Failed to update status." });
   }
 });
 
