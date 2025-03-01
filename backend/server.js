@@ -40,7 +40,7 @@ const CSV_FILE = "reports.csv";
 if (!fs.existsSync(CSV_FILE)) {
   fs.writeFileSync(
     CSV_FILE,
-    "id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not\n"
+    "id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not,urgency_level\n"
   );
 }
 
@@ -52,10 +52,32 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
+// Determine urgency level by comparing the prediction values exactly
+function getUrgencyLevel(humanitarian, severity) {
+  if (humanitarian === "affected_injured_or_dead_people") {
+    if (severity === "severe") return "5 (Critical)";
+    else if (severity === "mild") return "4 (High)";
+    else if (severity === "little_or_none") return "3 (Moderate)";
+  } else if (humanitarian === "infrastructure_and_utility_damage") {
+    if (severity === "severe") return "4 (High)";
+    else if (severity === "mild") return "3 (Moderate)";
+    else if (severity === "little_or_none") return "2 (Low)";
+  } else if (humanitarian === "rescue_volunteering_or_donation_effort") {
+    if (severity === "severe") return "3 (Moderate)";
+    else if (severity === "mild") return "2 (Low)";
+    else if (severity === "little_or_none") return "1 (Minimal)";
+  } else if (humanitarian === "not_humanitarian") {
+    if (severity === "severe") return "2 (Low)";
+    else if (severity === "mild" || severity === "little_or_none")
+      return "1 (Minimal)";
+  }
+  return "N/A"; // Return "N/A" if no condition is met
+}
+
 // -----------------------------------------------------------------------------
 // Endpoint: POST /user/report/
 // Upload a report, predict damage severity, humanitarian impact, and disaster text,
-// then store the report with predictions in the CSV.
+// then store the report with predictions and urgency level in the CSV.
 app.post("/user/report/", upload.single("image"), async (req, res) => {
   try {
     const { latitude, longitude, location, description } = req.body;
@@ -101,11 +123,17 @@ app.post("/user/report/", upload.single("image"), async (req, res) => {
     });
     const disasterPrediction = textResponse.data.predicted_label;
 
+    // Determine urgency level based on exact prediction values
+    const urgencyLevel = getUrgencyLevel(
+      humanitarianPrediction,
+      severityPrediction
+    );
+
     // Append new report data to the CSV file
-    const newRow = `${reportId},${image.filename},${latitude},${longitude},${location},${description},${severityPrediction},${humanitarianPrediction},${disasterPrediction}\n`;
+    const newRow = `${reportId},${image.filename},${latitude},${longitude},${location},${description},${severityPrediction},${humanitarianPrediction},${disasterPrediction},${urgencyLevel}\n`;
     fs.appendFileSync(CSV_FILE, newRow);
 
-    // Return the report details along with predictions
+    // Return the report details along with predictions and urgency level
     res.json({
       id: reportId,
       image_filename: image.filename,
@@ -116,6 +144,7 @@ app.post("/user/report/", upload.single("image"), async (req, res) => {
       severity: severityPrediction,
       humanitarian: humanitarianPrediction,
       disaster_or_not: disasterPrediction,
+      urgency_level: urgencyLevel,
     });
   } catch (error) {
     console.error("Error in report upload:", error.message);
@@ -136,7 +165,6 @@ app.get("/user/reports/", (req, res) => {
       const row = lines[i].split(",");
       const report = {};
       headers.forEach((header, index) => {
-        // Convert numeric fields appropriately
         if (
           header === "latitude" ||
           header === "longitude" ||
@@ -162,7 +190,6 @@ app.get("/user/reports/", (req, res) => {
 app.post("/signup", (req, res) => {
   try {
     const { mobile_number, name, email, password, mpin } = req.body;
-    // Check if user already exists by mobile number
     if (users.find((user) => user.mobile_number === mobile_number)) {
       return res.status(400).json({ message: "Mobile number already exists." });
     }
@@ -196,7 +223,6 @@ app.post("/login", (req, res) => {
     if (user.mpin !== mpin) {
       return res.status(401).json({ message: "Invalid MPIN." });
     }
-    // Return dummy contacts (all other users)
     const contacts = users
       .filter((u) => u.mobile_number !== mobile_number)
       .map((u) => ({

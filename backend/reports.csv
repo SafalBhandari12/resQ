@@ -1,1 +1,5 @@
-id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not
+id,image_filename,latitude,longitude,location,description,severity,humanitarian,disaster_or_not,urgency_level
+1,1740803528665-image.png,28.460835,77.4890377,Greater Noida,earthquake,little_or_none,not_humanitarian,Disaster,1 (Minimal)
+2,1740803803766-image.png,28.4531082,77.2816581,Shafipur,there is an earthquake,severe,infrastructure_and_utility_damage,Disaster,4 (High)
+3,1740803803766-image.png,28.3531082,77.2816581,Shafipur,there is an earthquake,severe,infrastructure_and_utility_damage,Disaster,5 (Critical)
+4,1740803803766-image.png,28.3531082,73.2816581,Shafipur,there is an earthquake,severe,infrastructure_and_utility_damage,Disaster,2 (Low)
